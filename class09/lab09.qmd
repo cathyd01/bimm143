@@ -1,0 +1,129 @@
+---
+title: "Class 9 Lab"
+author: "Catherine Diep"
+format: html
+---
+
+## The RCSB Protein Data Bank (PDB)
+
+Protein structures by X-ray crystalgraphy dominate this database. We are skipping Q1-3 as the website was too slow for us.
+
+## 2. Visualizing the HIV-1 protease structure
+
+![HIV-Pr structure from 1hsg](images/1HSG.png)
+
+> Q4: Water molecules normally have 3 atoms. Why do we see just one atom per water molecule in this structure?
+
+We only see one atom (the oxygen atom) per molecule because the hydrogen atoms are too small to be displayed by PDB.
+
+> Q5: There is a critical "conserved" water molecule in the binding site. Can you identify this water molecule? What residue number does this water molecule have?
+
+This water is labeled HOH 308.
+
+![](1HSG%20(water).png){width="438"}
+
+> Q6: Generate and save a figure clearly showing the two distinct chains of HIV-protease along with the ligand. You might also consider showing the catalytic residues ASP 25 in each chain (we recommend "Ball & Stick" for these side-chains). Add this figure to your Quarto document.
+
+![1hsg with marked Asp](images/1HSG-01.png){width="550"}
+
+> Discussion Topic: Can you think of a way in which indinavir, or even larger ligands and substrates, could enter the binding site? Larger ligands could enter the binding site when the HIV-protease's two chains move apart to expose the site.
+
+## 3. Introduction to Bio3D in R.
+
+Bio3D is an R package for structural bioinformatics. To use it we need to call it up iwth the 'libary()' function.
+
+```{r}
+library(bio3d)
+pdb <- read.pdb("1hsg")
+pdb
+```
+
+> Q7: How many amino acid residues are there in this pdb object? 198
+
+> Q8: Name one of the two non-protein residues? HOH
+
+> Q9: How many protein chains are in this structure? 2
+
+The ATAM records of a PDB file are stored in 'pdb\$atom'.
+
+```{r}
+head(pdb$atom)
+```
+
+# Comparative analysis of Adenylate kinase (ADK)
+
+> Q10. Which of the packages above is found only on BioConductor and not CRAN? MSA
+
+> Q11. Which of the above packages is not found on BioConductor or CRAN?: bio3d-view
+
+> Q12. True or False? Functions from the devtools package can be used to install packages from GitHub and BitBucket? TRUE
+
+We will start our analysis with a single PDB id (code from the PDB database): 1AKE
+
+First we get its primary sequence:
+
+```{r}
+aa <- get.seq("1ake_a")
+aa
+```
+
+> Q13. How many amino acids are in this sequence, i.e. how long is this sequence? 214
+
+```{r}
+# Blast or hmmr search
+#b <- blast.pdb(aa)
+```
+
+```{r}
+#hits <- plot(b)
+#List out some 'top hits'
+#head(hits$pdb.id)
+```
+
+Use these ADK structures for analysis:
+
+```{r}
+hits <- NULL
+hits$pdb.id <- c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+```
+
+Download all these PDB files from the database...
+
+```{r}
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+```{r}
+# Align releated PDBs
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+```{r}
+# Vector containing PDB codes for figure axis
+ids <- basename.pdb(pdbs$id)
+
+# Draw schematic alignment
+plot(pdbs, labels=ids)
+```
+
+```{r}
+anno <- pdb.annotate(ids)
+unique(anno$source)
+```
+
+```{r}
+# Perform PCA
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+```{r}
+# Calculate RMSD
+rd <- rmsd(pdbs)
+
+# Structure-based clustering
+hc.rd <- hclust(dist(rd))
+grps.rd <- cutree(hc.rd, k=3)
+
+plot(pc.xray, 1:2, col="grey50", bg=grps.rd, pch=21, cex=1)
+```
